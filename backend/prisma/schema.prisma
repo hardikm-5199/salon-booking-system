@@ -1,0 +1,111 @@
+// This is your Prisma schema file
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Salon {
+  id           String    @id @default(cuid())
+  name         String
+  code         String    @unique
+  email        String    @unique
+  phone        String
+  address      String?
+  workingHours Json      // Store as JSON for flexibility
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  
+  owner        User?     @relation("SalonOwner")
+  services     Service[]
+  bookings     Booking[]
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  password     String?   // Null for clients who book without account
+  name         String
+  phone        String?
+  role         Role      @default(CLIENT)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  
+  ownedSalon   Salon?    @relation("SalonOwner", fields: [salonId], references: [id])
+  salonId      String?   @unique
+  bookings     Booking[]
+}
+
+model Service {
+  id           String    @id @default(cuid())
+  name         String
+  description  String?
+  price        Decimal   @db.Decimal(10, 2)
+  duration     Int       // Duration in minutes
+  active       Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  
+  salon        Salon     @relation(fields: [salonId], references: [id])
+  salonId      String
+  bookings     Booking[]
+  
+  @@index([salonId])
+}
+
+model Booking {
+  id           String    @id @default(cuid())
+  date         DateTime
+  status       BookingStatus @default(PENDING)
+  totalAmount  Decimal   @db.Decimal(10, 2)
+  depositAmount Decimal? @db.Decimal(10, 2)
+  notes        String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  
+  client       User      @relation(fields: [clientId], references: [id])
+  clientId     String
+  service      Service   @relation(fields: [serviceId], references: [id])
+  serviceId    String
+  salon        Salon     @relation(fields: [salonId], references: [id])
+  salonId      String
+  payment      Payment?
+  
+  @@index([salonId, date])
+  @@index([clientId])
+}
+
+model Payment {
+  id           String    @id @default(cuid())
+  stripePaymentId String? @unique
+  amount       Decimal   @db.Decimal(10, 2)
+  status       PaymentStatus
+  createdAt    DateTime  @default(now())
+  
+  booking      Booking   @relation(fields: [bookingId], references: [id])
+  bookingId    String    @unique
+}
+
+enum Role {
+  SALON_OWNER
+  CLIENT
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}

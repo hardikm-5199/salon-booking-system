@@ -16,27 +16,27 @@ model Salon {
   email        String    @unique
   phone        String
   address      String?
-  workingHours Json      // Store as JSON for flexibility
+  workingHours Json
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   
-  owner        User?     @relation("SalonOwner")
+  owner        User?     @relation("SalonOwner", fields: [ownerId], references: [id])
+  ownerId      String?   @unique
   services     Service[]
   bookings     Booking[]
 }
 
 model User {
   id           String    @id @default(cuid())
+  authId       String    @unique  // Links to Supabase auth.users.id
   email        String    @unique
-  password     String?   // Null for clients who book without account
   name         String
   phone        String?
   role         Role      @default(CLIENT)
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   
-  ownedSalon   Salon?    @relation("SalonOwner", fields: [salonId], references: [id])
-  salonId      String?   @unique
+  ownedSalon   Salon?    @relation("SalonOwner")
   bookings     Booking[]
 }
 
